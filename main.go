@@ -44,21 +44,21 @@ func validateContains() {
 }
 
 func contains() string {
-	var ip net.IP
+	var c bool
 	_, network, err := net.ParseCIDR(*networkPtr)
 	if err != nil {
 		log.Fatalf("Error parsing network CIDR: %v\n", err)
 	}
 	if *ipPtr != "" {
-		ip, err = parseIP(*ipPtr)
+		c, err = containsIP(*ipPtr, network)
 	}
 	if *subnetPtr != "" {
-		ip, err = parseSubnet(*subnetPtr)
+		c, err = containsSubnet(*subnetPtr, network)
 	}
 	if err != nil {
 		log.Fatal(err)
 	}
-	return fmt.Sprint(network.Contains(ip))
+	return fmt.Sprint(c)
 }
 
 func parseIP(s string) (net.IP, error) {
@@ -69,10 +69,31 @@ func parseIP(s string) (net.IP, error) {
 	return ip, nil
 }
 
-func parseSubnet(s string) (net.IP, error) {
-	ip, _, err := net.ParseCIDR(s)
+func parseSubnet(s string) (net.IP, *net.IPNet, error) {
+	ip, network, err := net.ParseCIDR(s)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing subnet %s: %v\n", s, err)
+		return nil, nil, fmt.Errorf("Error parsing subnet %s: %v\n", s, err)
 	}
-	return ip, err
+	return ip, network, nil
+}
+
+func containsIP(s string, network *net.IPNet) (bool, error) {
+	ip, err := parseIP(s)
+	if err != nil {
+		return false, err
+	}
+	return network.Contains(ip), nil
+}
+
+func containsSubnet(s string, network *net.IPNet) (bool, error) {
+	ip, subnet, err := parseSubnet(s)
+	if err != nil {
+		return false, err
+	}
+	sMaskSize, _ := subnet.Mask.Size()
+	nMaskSize, _ := network.Mask.Size()
+	if sMaskSize < nMaskSize {
+		return false, nil
+	}
+	return network.Contains(ip), nil
 }

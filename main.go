@@ -11,12 +11,19 @@ import (
 var (
 	// Subcommands
 	containsCommand = flag.NewFlagSet("contains", flag.ExitOnError)
+	infoCommand     = flag.NewFlagSet("info", flag.ExitOnError)
 
-	// containsCommand flag pointers
-	ipPtr      = containsCommand.String("ip", "", "IP address. Will test if network contains this IP. Exactly one of ip or subnet is required")
+	// Flag pointers
+	ipPtr      = containsCommand.String("ip", "", "IP address. Will test if the network contains this IP. Exactly one of 'ip' or 'subnet' is required.")
 	networkPtr = containsCommand.String("network", "", "Network in CIDR notation (Required)")
-	subnetPtr  = containsCommand.String("subnet", "", "Subnet in CIDR notation. Will test if network contains this subnet. Exactly one of ip or subnet is required.")
+	subnetPtr  = containsCommand.String("subnet", "", "Subnet in CIDR notation. Will test if the network contains this subnet. Exactly one of 'ip' or 'subnet' is required.")
+
+	networkPtrInfo = infoCommand.String("network", "", "Network in CIDR notation (Required)")
 )
+
+type networkInfo struct {
+	address string
+}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -28,6 +35,9 @@ func main() {
 	case "contains":
 		validateContains()
 		outcome = contains()
+	case "info":
+		validateInfo()
+		outcome = info()
 	default:
 		flag.PrintDefaults()
 		os.Exit(1)
@@ -41,6 +51,25 @@ func validateContains() {
 		containsCommand.PrintDefaults()
 		os.Exit(1)
 	}
+}
+
+func validateInfo() {
+	infoCommand.Parse(os.Args[2:])
+	if *networkPtrInfo == "" {
+		infoCommand.PrintDefaults()
+		os.Exit(1)
+	}
+}
+
+func info() string {
+	_, network, err := net.ParseCIDR(*networkPtrInfo)
+	if err != nil {
+		log.Fatalf("Error parsing network CIDR: %v\n", err)
+	}
+	i := &networkInfo{
+		address: network.IP.String(),
+	}
+	return fmt.Sprintf("Info:\nNetwork address: %s\n", i.address)
 }
 
 func contains() string {

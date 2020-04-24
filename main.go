@@ -4,8 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"os"
+	"strings"
 )
 
 var (
@@ -23,6 +25,8 @@ var (
 
 type networkInfo struct {
 	address string
+	hosts   int
+	netmask string
 }
 
 func main() {
@@ -66,10 +70,14 @@ func info() string {
 	if err != nil {
 		log.Fatalf("Error parsing network CIDR: %v\n", err)
 	}
+	h := hosts(network)
+	nm := netmask(network)
 	i := &networkInfo{
 		address: network.IP.String(),
+		hosts:   h,
+		netmask: nm,
 	}
-	return fmt.Sprintf("Info:\nNetwork address: %s\n", i.address)
+	return fmt.Sprintf("Info:\nNetwork address: %s\nHosts: %d\nNetmask: %s\n", i.address, i.hosts, i.netmask)
 }
 
 func contains() string {
@@ -125,4 +133,27 @@ func containsSubnet(s string, network *net.IPNet) (bool, error) {
 		return false, nil
 	}
 	return network.Contains(ip), nil
+}
+
+func hosts(network *net.IPNet) int {
+	leadingBits, size := network.Mask.Size()
+	lastBits := size - leadingBits
+	fmt.Println(size, leadingBits, lastBits)
+	h := math.Pow(2, float64(lastBits))
+	return int(h)
+}
+
+func netmask(network *net.IPNet) string {
+	m := network.Mask
+	b := []byte(m)
+	s := byteToString(b)
+	return strings.Join(s, ".")
+}
+
+func byteToString(b []byte) []string {
+	s := make([]string, len(b))
+	for i, v := range b {
+		s[i] = fmt.Sprintf("%v", v)
+	}
+	return s
 }

@@ -29,6 +29,7 @@ type networkInfo struct {
 	allAddresses           int
 	netmask                string
 	firstAddress           net.IP
+	lastAddress            net.IP
 }
 
 func main() {
@@ -75,14 +76,16 @@ func info() string {
 	all, available := hosts(network)
 	nm := netmask(network)
 	first := firstIP(network)
+	last := lastIP(network)
 	i := &networkInfo{
 		networkAddress:         network.IP.String(),
 		allAddresses:           all,
 		availableHostAddresses: available,
 		netmask:                nm,
 		firstAddress:           first,
+		lastAddress:            last,
 	}
-	return fmt.Sprintf("Info:\nNetwork address: %s\nAll addresses: %d\nAvailable host addresses: %d\nNetmask: %s\nFirst host address: %v", i.networkAddress, i.allAddresses, i.availableHostAddresses, i.netmask, first)
+	return fmt.Sprintf("Info:\nNetwork address: %s\nAll addresses: %d\nAvailable host addresses: %d\nNetmask: %s\nFirst host address: %v\nLast host address: %v\n", i.networkAddress, i.allAddresses, i.availableHostAddresses, i.netmask, i.firstAddress, i.lastAddress)
 }
 
 func contains() string {
@@ -177,6 +180,36 @@ func firstIP(n *net.IPNet) net.IP {
 	copy(first, nip)
 	first[len(first)-1]++
 	return first
+}
+
+func lastIP(n *net.IPNet) net.IP {
+	im := inverseMask(n.Mask)
+	last := maskWithOR(im, n.IP)
+	if has32Exception(n) || has31Exception(n) {
+		return last
+	}
+	last[len(last)-1]--
+	return last
+}
+
+func inverseMask(m net.IPMask) net.IPMask {
+	im := make(net.IPMask, len(m))
+	for i, b := range m {
+		im[i] = ^b
+	}
+	return im
+}
+
+func maskWithOR(mask net.IPMask, ip net.IP) net.IP {
+	n := len(ip)
+	if n != len(mask) {
+		return nil
+	}
+	out := make(net.IP, n)
+	for i := 0; i < n; i++ {
+		out[i] = ip[i] | mask[i]
+	}
+	return out
 }
 
 func has31Exception(network *net.IPNet) bool {

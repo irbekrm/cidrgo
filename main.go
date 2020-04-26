@@ -24,9 +24,10 @@ var (
 )
 
 type networkInfo struct {
-	address string
-	hosts   int
-	netmask string
+	networkAddress         string
+	availableHostAddresses int
+	allAddresses           int
+	netmask                string
 }
 
 func main() {
@@ -70,14 +71,15 @@ func info() string {
 	if err != nil {
 		log.Fatalf("Error parsing network CIDR: %v\n", err)
 	}
-	h := hosts(network)
+	all, available := hosts(network)
 	nm := netmask(network)
 	i := &networkInfo{
-		address: network.IP.String(),
-		hosts:   h,
-		netmask: nm,
+		networkAddress:         network.IP.String(),
+		allAddresses:           all,
+		availableHostAddresses: available,
+		netmask:                nm,
 	}
-	return fmt.Sprintf("Info:\nNetwork address: %s\nHosts: %d\nNetmask: %s\n", i.address, i.hosts, i.netmask)
+	return fmt.Sprintf("Info:\nNetwork address: %s\nAll addresses: %d\nAvailable host addresses: %d\nNetmask: %s\n", i.networkAddress, i.allAddresses, i.availableHostAddresses, i.netmask)
 }
 
 func contains() string {
@@ -135,12 +137,17 @@ func containsSubnet(s string, network *net.IPNet) (bool, error) {
 	return network.Contains(ip), nil
 }
 
-func hosts(network *net.IPNet) int {
+func hosts(network *net.IPNet) (int, int) {
+	if has31Exception(network) {
+		return 2, 2
+	}
+	if has32Exception(network) {
+		return 1, 1
+	}
 	leadingBits, size := network.Mask.Size()
 	lastBits := size - leadingBits
-	fmt.Println(size, leadingBits, lastBits)
 	h := math.Pow(2, float64(lastBits))
-	return int(h)
+	return int(h), int(h) - 2
 }
 
 func netmask(network *net.IPNet) string {
@@ -156,4 +163,13 @@ func byteToString(b []byte) []string {
 		s[i] = fmt.Sprintf("%v", v)
 	}
 	return s
+}
+
+func has31Exception(network *net.IPNet) bool {
+	ones, bits := network.Mask.Size()
+	return bits == 32 && ones == 31
+}
+func has32Exception(network *net.IPNet) bool {
+	ones, bits := network.Mask.Size()
+	return bits == 32 && ones == 32
 }

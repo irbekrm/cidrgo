@@ -28,6 +28,7 @@ type networkInfo struct {
 	availableHostAddresses int
 	allAddresses           int
 	netmask                string
+	firstAddress           net.IP
 }
 
 func main() {
@@ -73,13 +74,15 @@ func info() string {
 	}
 	all, available := hosts(network)
 	nm := netmask(network)
+	first := firstIP(network)
 	i := &networkInfo{
 		networkAddress:         network.IP.String(),
 		allAddresses:           all,
 		availableHostAddresses: available,
 		netmask:                nm,
+		firstAddress:           first,
 	}
-	return fmt.Sprintf("Info:\nNetwork address: %s\nAll addresses: %d\nAvailable host addresses: %d\nNetmask: %s\n", i.networkAddress, i.allAddresses, i.availableHostAddresses, i.netmask)
+	return fmt.Sprintf("Info:\nNetwork address: %s\nAll addresses: %d\nAvailable host addresses: %d\nNetmask: %s\nFirst host address: %v", i.networkAddress, i.allAddresses, i.availableHostAddresses, i.netmask, first)
 }
 
 func contains() string {
@@ -163,6 +166,17 @@ func byteToString(b []byte) []string {
 		s[i] = fmt.Sprintf("%v", v)
 	}
 	return s
+}
+
+func firstIP(n *net.IPNet) net.IP {
+	nip := n.IP.To4()
+	if has31Exception(n) || has32Exception(n) {
+		return nip
+	}
+	first := make(net.IP, len(nip))
+	copy(first, nip)
+	first[len(first)-1]++
+	return first
 }
 
 func has31Exception(network *net.IPNet) bool {

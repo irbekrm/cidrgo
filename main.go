@@ -4,10 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math"
 	"net"
 	"os"
-	"strings"
+
+	"github.com/irbekrm/cidrgo/pkg/cidr"
 )
 
 var (
@@ -69,23 +69,12 @@ func validateInfo() {
 }
 
 func info() string {
-	_, network, err := net.ParseCIDR(*networkPtrInfo)
+	n, err := cidr.NewNetwork(*networkPtrInfo)
 	if err != nil {
 		log.Fatalf("Error parsing network CIDR: %v\n", err)
 	}
-	all, available := hosts(network)
-	nm := netmask(network)
-	first := firstIP(network)
-	last := lastIP(network)
-	i := &networkInfo{
-		networkAddress:         network.IP.String(),
-		allAddresses:           all,
-		availableHostAddresses: available,
-		netmask:                nm,
-		firstAddress:           first,
-		lastAddress:            last,
-	}
-	return fmt.Sprintf("Info:\nNetwork address: %s\nAll addresses: %d\nAvailable host addresses: %d\nNetmask: %s\nFirst host address: %v\nLast host address: %v\n", i.networkAddress, i.allAddresses, i.availableHostAddresses, i.netmask, i.firstAddress, i.lastAddress)
+	i := n.Describe()
+	return fmt.Sprintf("Info:\nNetwork address: %s\nAll addresses: %d\nAvailable host addresses: %d\nNetmask: %s\nFirst host address: %v\nLast host address: %v\n", i.NetworkAddress, i.AllAddresses, i.AvailableHostAddresses, i.Netmask, i.FirstAddress, i.LastAddress)
 }
 
 func contains() string {
@@ -141,82 +130,4 @@ func containsSubnet(s string, network *net.IPNet) (bool, error) {
 		return false, nil
 	}
 	return network.Contains(ip), nil
-}
-
-func hosts(network *net.IPNet) (int, int) {
-	if has31Exception(network) {
-		return 2, 2
-	}
-	if has32Exception(network) {
-		return 1, 1
-	}
-	leadingBits, size := network.Mask.Size()
-	lastBits := size - leadingBits
-	h := math.Pow(2, float64(lastBits))
-	return int(h), int(h) - 2
-}
-
-func netmask(network *net.IPNet) string {
-	m := network.Mask
-	b := []byte(m)
-	s := byteToString(b)
-	return strings.Join(s, ".")
-}
-
-func byteToString(b []byte) []string {
-	s := make([]string, len(b))
-	for i, v := range b {
-		s[i] = fmt.Sprintf("%v", v)
-	}
-	return s
-}
-
-func firstIP(n *net.IPNet) net.IP {
-	nip := n.IP.To4()
-	if has31Exception(n) || has32Exception(n) {
-		return nip
-	}
-	first := make(net.IP, len(nip))
-	copy(first, nip)
-	first[len(first)-1]++
-	return first
-}
-
-func lastIP(n *net.IPNet) net.IP {
-	im := inverseMask(n.Mask)
-	last := maskWithOR(im, n.IP)
-	if has32Exception(n) || has31Exception(n) {
-		return last
-	}
-	last[len(last)-1]--
-	return last
-}
-
-func inverseMask(m net.IPMask) net.IPMask {
-	im := make(net.IPMask, len(m))
-	for i, b := range m {
-		im[i] = ^b
-	}
-	return im
-}
-
-func maskWithOR(mask net.IPMask, ip net.IP) net.IP {
-	n := len(ip)
-	if n != len(mask) {
-		return nil
-	}
-	out := make(net.IP, n)
-	for i := 0; i < n; i++ {
-		out[i] = ip[i] | mask[i]
-	}
-	return out
-}
-
-func has31Exception(network *net.IPNet) bool {
-	ones, bits := network.Mask.Size()
-	return bits == 32 && ones == 31
-}
-func has32Exception(network *net.IPNet) bool {
-	ones, bits := network.Mask.Size()
-	return bits == 32 && ones == 32
 }

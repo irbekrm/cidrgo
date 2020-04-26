@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
 
 	"github.com/irbekrm/cidrgo/pkg/cidr"
@@ -22,15 +21,6 @@ var (
 
 	networkPtrInfo = infoCommand.String("network", "", "Network in CIDR notation (Required)")
 )
-
-type networkInfo struct {
-	networkAddress         string
-	availableHostAddresses int
-	allAddresses           int
-	netmask                string
-	firstAddress           net.IP
-	lastAddress            net.IP
-}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -79,55 +69,18 @@ func info() string {
 
 func contains() string {
 	var c bool
-	_, network, err := net.ParseCIDR(*networkPtr)
+	n, err := cidr.NewNetwork(*networkPtr)
 	if err != nil {
 		log.Fatalf("Error parsing network CIDR: %v\n", err)
 	}
 	if *ipPtr != "" {
-		c, err = containsIP(*ipPtr, network)
+		c, err = n.ContainsIP(*ipPtr)
 	}
 	if *subnetPtr != "" {
-		c, err = containsSubnet(*subnetPtr, network)
+		c, err = n.ContainsSubnet(*subnetPtr)
 	}
 	if err != nil {
 		log.Fatal(err)
 	}
 	return fmt.Sprint(c)
-}
-
-func parseIP(s string) (net.IP, error) {
-	ip := net.ParseIP(s)
-	if ip == nil {
-		return nil, fmt.Errorf("Error parsing IP %s\n", s)
-	}
-	return ip, nil
-}
-
-func parseSubnet(s string) (net.IP, *net.IPNet, error) {
-	ip, network, err := net.ParseCIDR(s)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Error parsing subnet %s: %v\n", s, err)
-	}
-	return ip, network, nil
-}
-
-func containsIP(s string, network *net.IPNet) (bool, error) {
-	ip, err := parseIP(s)
-	if err != nil {
-		return false, err
-	}
-	return network.Contains(ip), nil
-}
-
-func containsSubnet(s string, network *net.IPNet) (bool, error) {
-	ip, subnet, err := parseSubnet(s)
-	if err != nil {
-		return false, err
-	}
-	sMaskSize, _ := subnet.Mask.Size()
-	nMaskSize, _ := network.Mask.Size()
-	if sMaskSize < nMaskSize {
-		return false, nil
-	}
-	return network.Contains(ip), nil
 }

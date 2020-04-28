@@ -68,19 +68,24 @@ func info() string {
 }
 
 func contains() string {
-	var c bool
-	n, err := cidr.NewNetwork(*networkPtr)
+	var out string
+	var c, n, b bool
+	var err error
+
+	netw, err := cidr.NewNetwork(*networkPtr)
 	if err != nil {
 		log.Fatalf("Error parsing network CIDR: %v\n", err)
 	}
 	if *ipPtr != "" {
-		c, err = n.ContainsIP(*ipPtr)
+		c, n, b, err = netw.ContainsIPAsHostAddress(*ipPtr)
+		out = fmt.Sprintf("\nAddress in range for network: %v\nNetwork address only: %v\nBroadcast address only: %v\n", c, n, b)
 	}
 	if *subnetPtr != "" {
-		c, err = n.ContainsSubnet(*subnetPtr)
+		c, err = netw.ContainsSubnet(*subnetPtr)
+		out = fmt.Sprint(c)
 	}
 	if err != nil {
 		log.Fatal(err)
 	}
-	return fmt.Sprint(c)
+	return out
 }

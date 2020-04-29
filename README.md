@@ -73,3 +73,8 @@ $ cidrgo contains -network 10.0.0.0/16 -ip 10.0.0.0
 ```
 
 
+## Development
+
+Run tests with `go test ./...`
+
+

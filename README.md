@@ -2,6 +2,8 @@
 
 A CLI CIDR calculator
 
+:warning: Currently only works with IPv4 :warning:
+
 ## Installation
 
 1. [Install go](https://golang.org/doc/install) if you haven't already.
@@ -56,6 +58,8 @@ $ cidrgo info -network 10.11.0.0/16
 ##### Description:
 
 `contains` command can be used to determine if an IP address or a subnet is in a network. For an IP address `contains` will also determine whether the address is only used as network address or only used as broadcast address.
+
+:warning: Currently only works with IPv4 :warning:
 
 ##### Examples:
 

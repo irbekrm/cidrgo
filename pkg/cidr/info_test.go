@@ -36,6 +36,18 @@ func TestNetwork_Describe(t *testing.T) {
 				LastAddress:            net.IP([]byte{10, 0, 0, 0}),
 			},
 		},
+		{
+			name:     "Success- /31 CIDR",
+			netwCIDR: "10.0.0.0/31",
+			want: Info{
+				NetworkAddress:         net.IP([]byte{10, 0, 0, 0}),
+				AllAddresses:           2,
+				AvailableHostAddresses: 2,
+				Netmask:                "255.255.255.254",
+				FirstAddress:           net.IP([]byte{10, 0, 0, 0}),
+				LastAddress:            net.IP([]byte{10, 0, 0, 1}),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
